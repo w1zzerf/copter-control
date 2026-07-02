@@ -1,173 +1,133 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Управление вертолётом</title>
 
-```
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: var(--tg-theme-bg-color, #1f1f1f);
-        color: var(--tg-theme-text-color, #ffffff);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        margin: 0;
-        padding: 20px;
-        box-sizing: border-box;
-    }
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #1f1f1f);
+            color: var(--tg-theme-text-color, #ffffff);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
 
-    h2 {
-        margin: 0 0 10px;
-        text-align: center;
-    }
+        h2 {
+            margin: 0 0 10px;
+            text-align: center;
+        }
 
-    .helicopter-rotor {
-        width: 120px;
-        height: 20px;
-        background-color: var(--tg-theme-button-color, #2481cc);
-        border-radius: 10px;
-        margin: 40px 0;
-        transition: transform 0.1s linear;
-        box-shadow: 0 0 15px var(--tg-theme-button-color, #2481cc);
-    }
+        .helicopter-rotor {
+            width: 120px;
+            height: 20px;
+            background-color: #2481cc;
+            border-radius: 10px;
+            margin: 40px 0;
+            transition: transform 0.1s linear;
+            box-shadow: 0 0 15px #2481cc;
+        }
 
-    .slider-container {
-        width: 100%;
-        max-width: 300px;
-        text-align: center;
-    }
+        .slider-container {
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+        }
 
-    input[type="range"] {
-        width: 100%;
-        margin: 20px 0;
-        appearance: none;
-        -webkit-appearance: none;
-        background: #444;
-        height: 8px;
-        border-radius: 5px;
-        outline: none;
-    }
+        input[type="range"] {
+            width: 100%;
+            margin: 20px 0;
+        }
 
-    input[type="range"]::-webkit-slider-thumb {
-        appearance: none;
-        -webkit-appearance: none;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: var(--tg-theme-button-color, #2481cc);
-        cursor: pointer;
-    }
+        .status-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
 
-    .status-text {
-        font-size: 1.2rem;
-        font-weight: bold;
-    }
-
-    #connectionStatus {
-        margin-top: 18px;
-        min-height: 22px;
-        font-size: 0.9rem;
-        text-align: center;
-        opacity: 0.9;
-    }
-</style>
-```
-
+        #connectionStatus {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
 </head>
 
 <body>
-    <h2>Управление питанием лопастей</h2>
 
-```
+<h2>Управление питанием</h2>
+
 <div class="helicopter-rotor" id="rotor"></div>
 
 <div class="slider-container">
     <input type="range" id="powerSlider" min="0" max="100" value="0">
     <div class="status-text">
-        Подача тока: <span id="powerValue">0</span>%
+        Мощность: <span id="powerValue">0</span>%
     </div>
-    <div id="connectionStatus">Подключение к серверу…</div>
+    <div id="connectionStatus">Ожидание...</div>
 </div>
 
 <script>
-    const NGROK_URL = 'https://itchy-crews-behave.loca.lt';
-    
+    const NGROK_URL = "https://strut-myth-dedicate.ngrok-free.dev";
+
     const tg = window.Telegram?.WebApp;
     if (tg) {
         tg.ready();
         tg.expand();
     }
-    
-    const slider = document.getElementById('powerSlider');
-    const powerValue = document.getElementById('powerValue');
-    const rotor = document.getElementById('rotor');
-    const connectionStatus = document.getElementById('connectionStatus');
-    
+
+    const slider = document.getElementById("powerSlider");
+    const powerValue = document.getElementById("powerValue");
+    const rotor = document.getElementById("rotor");
+    const status = document.getElementById("connectionStatus");
+
     let angle = 0;
     let speed = 0;
-    let sendTimeout = null;
-    
+    let timeout;
+
     function animate() {
         angle += speed;
         rotor.style.transform = `rotate(${angle}deg)`;
         requestAnimationFrame(animate);
     }
-    
-    async function checkServer() {
-        try {
-            const response = await fetch(`${NGROK_URL}/health`);
-    
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-            connectionStatus.textContent = 'Сервер подключён';
-        } catch (error) {
-            console.error(error);
-            connectionStatus.textContent = 'Нет связи с сервером';
-        }
-    }
-    
+
     async function sendPower(value) {
         try {
-            connectionStatus.textContent = `Отправка: ${value}%…`;
-    
-            const response = await fetch(
-                `${NGROK_URL}/set_power?value=${encodeURIComponent(value)}`
-            );
-    
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-            connectionStatus.textContent = `Отправлено: ${value}%`;
-        } catch (error) {
-            console.error(error);
-            connectionStatus.textContent = 'Ошибка отправки на сервер';
+            status.textContent = "Отправка...";
+
+            await fetch(`${NGROK_URL}/set_power?value=${value}`, {
+                method: "GET"
+            });
+
+            status.textContent = `Отправлено: ${value}%`;
+        } catch (e) {
+            console.error(e);
+            status.textContent = "Ошибка соединения";
         }
     }
-    
-    slider.addEventListener('input', (event) => {
-        const value = event.target.value;
-    
+
+    slider.addEventListener("input", (e) => {
+        const value = e.target.value;
+
         powerValue.textContent = value;
-        speed = (Number(value) / 100) * 45;
-    
-        clearTimeout(sendTimeout);
-    
-        sendTimeout = setTimeout(() => {
+        speed = (value / 100) * 45;
+
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
             sendPower(value);
         }, 80);
     });
-    
-    checkServer();
+
     animate();
 </script>
-```
 
 </body>
 </html>
