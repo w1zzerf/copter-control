@@ -1,133 +1,190 @@
 <!DOCTYPE html>
+
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Управление вертолетом</title>
-    <!-- Подключаем Telegram Web Apps SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: var(--tg-theme-background-color, #1f1f1f);
-            color: var(--tg-theme-text-color, #ffffff);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+    <title>Управление вертолётом</title>
 
-        h2 {
-            margin-bottom: 10px;
-            text-align: center;
-        }
+```
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-        /* Визуализация лопастей */
-        .helicopter-rotor {
-            width: 120px;
-            height: 20px;
-            background-color: var(--tg-theme-button-color, #2481cc);
-            border-radius: 10px;
-            margin: 40px 0;
-            transition: transform 0.1s linear;
-            box-shadow: 0 0 15px var(--tg-theme-button-color, #2481cc);
-        }
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: var(--tg-theme-bg-color, #1f1f1f);
+        color: var(--tg-theme-text-color, #ffffff);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
+    }
 
-        /* Контейнер для ползунка */
-        .slider-container {
-            width: 100%;
-            max-width: 300px;
-            text-align: center;
-        }
+    h2 {
+        margin: 0 0 10px;
+        text-align: center;
+    }
 
-        input[type="range"] {
-            width: 100%;
-            margin: 20px 0;
-            -webkit-appearance: none;
-            background: #444;
-            height: 8px;
-            border-radius: 5px;
-            outline: none;
-        }
+    .helicopter-rotor {
+        width: 120px;
+        height: 20px;
+        background-color: var(--tg-theme-button-color, #2481cc);
+        border-radius: 10px;
+        margin: 40px 0;
+        transition: transform 0.1s linear;
+        box-shadow: 0 0 15px var(--tg-theme-button-color, #2481cc);
+    }
 
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: var(--tg-theme-button-color, #2481cc);
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
+    .slider-container {
+        width: 100%;
+        max-width: 300px;
+        text-align: center;
+    }
 
-        input[type="range"]::-webkit-slider-thumb:active {
-            transform: scale(1.2);
-        }
+    input[type="range"] {
+        width: 100%;
+        margin: 20px 0;
+        appearance: none;
+        -webkit-appearance: none;
+        background: #444;
+        height: 8px;
+        border-radius: 5px;
+        outline: none;
+    }
 
-        .status-text {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-    </style>
+    input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--tg-theme-button-color, #2481cc);
+        cursor: pointer;
+    }
+
+    .status-text {
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+
+    #connectionStatus {
+        margin-top: 18px;
+        min-height: 22px;
+        font-size: 0.9rem;
+        text-align: center;
+        opacity: 0.9;
+    }
+</style>
+```
+
 </head>
+
 <body>
-
     <h2>Управление питанием лопастей</h2>
-    
-    <!-- Анимированный пропеллер -->
-    <div class="helicopter-rotor" id="rotor"></div>
 
-    <div class="slider-container">
-        <input type="range" id="powerSlider" min="0" max="100" value="0">
-        <div class="status-text">Подача тока: <span id="powerValue">0</span>%</div>
+```
+<div class="helicopter-rotor" id="rotor"></div>
+
+<div class="slider-container">
+    <input type="range" id="powerSlider" min="0" max="100" value="0">
+    <div class="status-text">
+        Подача тока: <span id="powerValue">0</span>%
     </div>
+    <div id="connectionStatus">Подключение к серверу…</div>
+</div>
 
-    <!-- Единственный правильный блок скрипта -->
-    <script>
-        const tg = window.Telegram.WebApp;
+<script>
+    const NGROK_URL = 'https://strut-myth-dedicate.ngrok-free.dev';
+
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
         tg.ready();
         tg.expand();
+    }
 
-        const slider = document.getElementById('powerSlider');
-        const powerValue = document.getElementById('powerValue');
-        const rotor = document.getElementById('rotor');
+    const slider = document.getElementById('powerSlider');
+    const powerValue = document.getElementById('powerValue');
+    const rotor = document.getElementById('rotor');
+    const connectionStatus = document.getElementById('connectionStatus');
 
-        let angle = 0;
-        let animationFrame;
-        let speed = 0;
-        let timeout = null;
+    let angle = 0;
+    let speed = 0;
+    let sendTimeout = null;
 
-        function animate() {
-            angle += speed;
-            rotor.style.transform = `rotate(${angle}deg)`;
-            animationFrame = requestAnimationFrame(animate);
+    function animate() {
+        angle += speed;
+        rotor.style.transform = `rotate(${angle}deg)`;
+        requestAnimationFrame(animate);
+    }
+
+    async function checkServer() {
+        try {
+            const response = await fetch(`${NGROK_URL}/health`, {
+                method: 'GET',
+                headers: {
+                    'ngrok-skip-browser-warning': 'true'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            connectionStatus.textContent = 'Сервер подключён';
+        } catch (error) {
+            console.error('Ошибка проверки сервера:', error);
+            connectionStatus.textContent = 'Нет связи с сервером';
         }
+    }
 
-        slider.addEventListener('input', (e) => {
-            const value = e.target.value;
-            powerValue.textContent = value;
-            speed = (value / 100) * 45; 
+    async function sendPower(value) {
+        try {
+            connectionStatus.textContent = `Отправка: ${value}%…`;
 
-            // Отправка данных на Python-сервер без закрытия приложения
-            if (timeout) clearTimeout(timeout);
-            
-            timeout = setTimeout(() => {
-                fetch(`https://strut-myth-dedicate.ngrok-free.dev/set_power?value=${value}`, {
+            const response = await fetch(
+                `${NGROK_URL}/set_power?value=${encodeURIComponent(value)}`,
+                {
                     method: 'GET',
                     headers: {
-                        'bypass-tunnel-reminder': 'true' // Этот заголовок отключает страницу предупреждения
-                    },
-                    mode: 'no-cors'
-                })
-                .catch(err => console.error(err));
-            }, 50); 
-        });
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                }
+            );
 
-        animate();
-    </script>
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            connectionStatus.textContent = `Отправлено: ${value}%`;
+        } catch (error) {
+            console.error('Ошибка отправки мощности:', error);
+            connectionStatus.textContent = 'Ошибка отправки на сервер';
+        }
+    }
+
+    slider.addEventListener('input', (event) => {
+        const value = event.target.value;
+
+        powerValue.textContent = value;
+        speed = (Number(value) / 100) * 45;
+
+        if (sendTimeout) {
+            clearTimeout(sendTimeout);
+        }
+
+        sendTimeout = setTimeout(() => {
+            sendPower(value);
+        }, 80);
+    });
+
+    checkServer();
+    animate();
+</script>
+```
+
 </body>
 </html>
