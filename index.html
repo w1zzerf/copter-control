@@ -86,11 +86,11 @@
         <div class="status-text">Подача тока: <span id="powerValue">0</span>%</div>
     </div>
 
+    <!-- Единственный правильный блок скрипта -->
     <script>
-        // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
         tg.ready();
-        tg.expand(); // Разворачиваем приложение на весь экран
+        tg.expand();
 
         const slider = document.getElementById('powerSlider');
         const powerValue = document.getElementById('powerValue');
@@ -99,38 +99,28 @@
         let angle = 0;
         let animationFrame;
         let speed = 0;
+        let timeout = null;
 
-        // Функция анимации вращения лопастей
         function animate() {
             angle += speed;
             rotor.style.transform = `rotate(${angle}deg)`;
             animationFrame = requestAnimationFrame(animate);
         }
 
-        // Обработчик изменения ползунка
         slider.addEventListener('input', (e) => {
             const value = e.target.value;
             powerValue.textContent = value;
-            
-            // Рассчитываем скорость вращения (шаг угла за кадр)
             speed = (value / 100) * 45; 
 
-            // Показываем/скрываем главную кнопку Telegram в зависимости от значения
-            if (value > 0) {
-                tg.MainButton.setText(`Применить мощность: ${value}%`);
-                tg.MainButton.show();
-            } else {
-                tg.MainButton.hide();
-            }
+            // Отправка данных на Python-сервер без закрытия приложения
+            if (timeout) clearTimeout(timeout);
+            
+            timeout = setTimeout(() => {
+                fetch(`http://127.0.0.1:8080/set_power?value=${value}`, { mode: 'no-cors' })
+                    .catch(err => console.error(err));
+            }, 50); 
         });
 
-        // Отправка данных обратно в бот при нажатии на Главную кнопку Telegram
-        tg.MainButton.onClick(() => {
-            const data = JSON.stringify({ power: slider.value });
-            tg.sendData(data); // Отправляет данные боту и закрывает WebApp
-        });
-
-        // Запуск анимации
         animate();
     </script>
 </body>
