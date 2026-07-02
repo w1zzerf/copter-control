@@ -116,7 +116,7 @@
             if (timeout) clearTimeout(timeout);
             
             timeout = setTimeout(() => {
-                fetch(`http://127.0.0.1:8080/set_power?value=${value}`, { mode: 'no-cors' })
+                fetch(`https://old-trees-fry.loca.lt/set_power?value=${value}`, { mode: 'no-cors' })
                     .catch(err => console.error(err));
             }, 50); 
         });
