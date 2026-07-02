@@ -99,85 +99,71 @@
 
 <script>
     const NGROK_URL = 'https://itchy-crews-behave.loca.lt';
-
+    
     const tg = window.Telegram?.WebApp;
     if (tg) {
         tg.ready();
         tg.expand();
     }
-
+    
     const slider = document.getElementById('powerSlider');
     const powerValue = document.getElementById('powerValue');
     const rotor = document.getElementById('rotor');
     const connectionStatus = document.getElementById('connectionStatus');
-
+    
     let angle = 0;
     let speed = 0;
     let sendTimeout = null;
-
+    
     function animate() {
         angle += speed;
         rotor.style.transform = `rotate(${angle}deg)`;
         requestAnimationFrame(animate);
     }
-
+    
     async function checkServer() {
         try {
-            const response = await fetch(`${NGROK_URL}/health`, {
-                method: 'GET',
-                headers: {
-                    'ngrok-skip-browser-warning': 'true'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
+            const response = await fetch(`${NGROK_URL}/health`);
+    
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
             connectionStatus.textContent = 'Сервер подключён';
         } catch (error) {
-            console.error('Ошибка проверки сервера:', error);
+            console.error(error);
             connectionStatus.textContent = 'Нет связи с сервером';
         }
     }
-
+    
     async function sendPower(value) {
         try {
             connectionStatus.textContent = `Отправка: ${value}%…`;
-
+    
             const response = await fetch(
-                `${NGROK_URL}/set_power?value=${encodeURIComponent(value)}`,
-                {
-                    method: 'GET',
-                }
+                `${NGROK_URL}/set_power?value=${encodeURIComponent(value)}`
             );
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
+    
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
             connectionStatus.textContent = `Отправлено: ${value}%`;
         } catch (error) {
-            console.error('Ошибка отправки мощности:', error);
+            console.error(error);
             connectionStatus.textContent = 'Ошибка отправки на сервер';
         }
     }
-
+    
     slider.addEventListener('input', (event) => {
         const value = event.target.value;
-
+    
         powerValue.textContent = value;
         speed = (Number(value) / 100) * 45;
-
-        if (sendTimeout) {
-            clearTimeout(sendTimeout);
-        }
-
+    
+        clearTimeout(sendTimeout);
+    
         sendTimeout = setTimeout(() => {
             sendPower(value);
         }, 80);
     });
-
+    
     checkServer();
     animate();
 </script>
